@@ -1,0 +1,14 @@
+torch
+torchvision
+ultralytics
+deep-sort-realtime
+opencv-python
+numpy
+scipy
+filterpy
+lapx
+scikit-learn
+PyYAML
+tqdm
+matplotlib
+Pillow
