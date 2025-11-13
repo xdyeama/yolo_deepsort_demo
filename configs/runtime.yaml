@@ -9,7 +9,7 @@ prefetch: 0
 
 # Visualization config
 show: true                     
-window_name: YOLOv8+DeepSORT
+window_name: YOLO Tracking
 draw:
   thickness: 2
   font_scale: 0.5

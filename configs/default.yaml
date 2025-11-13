@@ -1,7 +1,7 @@
-project_name: yolo_deepsort_demo
+project_name: yolo_tracking_demo
 run_name: null
 seed: 42
-determenistic: false
+deterministic: false
 cudnn_benchmark: true
 torch_num_threads: 8
 

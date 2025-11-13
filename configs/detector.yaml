@@ -9,6 +9,12 @@ agnostic_nms: false
 half: false
 amp: true
 warmup_frames: 3
+
+# Built-in tracking parameters (ByteTrack/BoT-SORT)
+# tracker_type: bytetrack.yaml (fast, recommended for real-time)
+# tracker_type: botsort.yaml (more accurate, slower)
+tracker_type: bytetrack.yaml
+persist_tracks: true  # Keep tracks across frames
 train: data/train
 test: data/test
 val: data/val

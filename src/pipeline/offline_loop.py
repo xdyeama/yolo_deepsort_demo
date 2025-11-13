@@ -1,6 +1,9 @@
 """
 Offline tracking loop for batch video processing.
 Processes all frames sequentially with progress tracking and complete output saving.
+
+Now uses YOLO's built-in tracking (ByteTrack/BoT-SORT) for real-time performance.
+DeepSORT code is commented out but kept for reference.
 """
 import cv2
 import traceback
@@ -12,8 +15,9 @@ from src.io.video_reader import VideoReader
 from src.io.video_writer import VideoWriter
 from src.io.serializer import TrackSerializer
 from src.io.visualizer import Visualizer, COCO_CLASSES
-from src.models.yolov8_detector import YOLOv8Detector
-from src.trackers.deep_sort_wrapper import DeepSortTracker
+from src.models.yolov8_detector import YOLODetector
+# COMMENTED OUT: DeepSORT is replaced by YOLO's built-in tracking
+# from src.trackers.deep_sort_wrapper import DeepSortTracker
 
 def apply_filters(
     detections: List[List[float]],
@@ -59,21 +63,27 @@ def run_offline_tracking(
     source: str,
     config: Dict[str, Any],
     detector: YOLOv8Detector,
-    tracker: DeepSortTracker,
-    output_dir: str
+    tracker: Optional[Any] = None,  # DEPRECATED: tracker parameter kept for backward compatibility
+    output_dir: str = None
 ) -> Dict[str, Any]:
     """
     Run offline tracking on video file or image directory.
     
+    Now uses YOLO's built-in tracking (ByteTrack/BoT-SORT) instead of DeepSORT for better performance.
+    
     Args:
         source: Path to video file or image directory
         config: Merged config dict (runtime + detector + tracker)
-        detector: Initialized YOLOv8Detector instance
-        tracker: Initialized DeepSortTracker instance
+        detector: Initialized YOLOv8Detector instance with tracking enabled
+        tracker: DEPRECATED - No longer used. YOLO's built-in tracker is used instead.
         output_dir: Directory for outputs (run_dir)
         
     Returns:
         Stats dict with processed_frames, total_time, avg_fps, saved_paths
+    
+    Note:
+        The 'tracker' parameter is kept for backward compatibility but is no longer used.
+        To use DeepSORT instead, uncomment the DeepSORT code blocks below.
     """
     try:
         reader = VideoReader(source)
@@ -83,7 +93,7 @@ def run_offline_tracking(
         writer = None
         if config.get('save_video', True):
             writer = VideoWriter(
-                path=str(Path(output_dir) / 'output.mp4'),
+                output_path=str(Path(output_dir) / 'output.mp4'),
                 fps=reader.fps or 30.0,
                 frame_size=reader.frame_size,
                 fourcc=config.get('video_writer', {}).get('fourcc', 'mp4v'),
@@ -124,14 +134,29 @@ def run_offline_tracking(
                 if max_frames and frame_idx >= max_frames:
                     break
 
-                # Detection
-                detections = detector.predict_frame(frame)
-
-                # Apply filters
-                detections = apply_filters(detections, config.get('filters', {}))
+                # ===== NEW: YOLO Built-in Tracking (ByteTrack/BoT-SORT) =====
+                # Direct tracking with YOLO - no separate detection step needed
+                tracks = detector.track_frame(frame)
                 
-                # Tracking
-                tracks = tracker.update(detections, frame)
+                # ===== OLD: DeepSORT Tracking (COMMENTED OUT) =====
+                # # Detection
+                # detections = detector.predict_frame(frame)
+                # # Apply filters
+                # detections = apply_filters(detections, config.get('filters', {}))
+                # # Tracking with DeepSORT
+                # tracks = tracker.update(detections, frame)
+                # ==================================================
+                
+                # Apply filters to tracks (optional - can filter by confidence, class, etc.)
+                # Note: YOLO tracking already applies confidence filtering during tracking
+                if config.get('filters'):
+                    # Convert tracks to detection format for filtering
+                    track_dets = [[t['bbox'][0], t['bbox'][1], t['bbox'][2], t['bbox'][3], 
+                                   t['confidence'], t['class']] for t in tracks]
+                    filtered_dets = apply_filters(track_dets, config.get('filters', {}))
+                    # Reconstruct tracks from filtered detections
+                    filtered_track_ids = set(range(len(filtered_dets)))
+                    tracks = [t for i, t in enumerate(tracks) if i in filtered_track_ids]
 
                 # Visualization
                 annotated = visualizer.draw_tracks(frame, tracks)

@@ -9,7 +9,6 @@ from datetime import datetime
 from src.utils.config import load_config
 from src.utils.devices import configure_torch_environment
 from src.models.yolov8_detector import YOLOv8Detector
-from src.trackers.deep_sort_wrapper import DeepSortTracker
 from src.pipeline.offline_loop import run_offline_tracking
 
 def parse_args():
@@ -23,7 +22,7 @@ def parse_args():
 
     # I/O
     parser.add_argument(
-        '--src', '-s',
+        '--source', '-s',
         type=str,
         default='0',
         help='Source input (video file, image directory, or webcam index (0) or RTSP URL)'
@@ -43,7 +42,7 @@ def parse_args():
         help='Path to config file'
     )
     parser.add_argument(
-        '--detect_cfg',
+        '--detector_cfg',
         type=str,
         default='configs/detector.yaml',
         help='Path to detector config file'
@@ -65,7 +64,6 @@ def parse_args():
     parser.add_argument(
         '--conf',
         type=float,
-        default=0.5,
         help='Detection confidence threshold'
     )
     parser.add_argument(
@@ -108,7 +106,7 @@ def build_cli_overrides(args):
     overrides = {}
     
     # Source
-    overrides['src'] = args.src
+    overrides['source'] = args.source
     
     # Detector overrides
     if args.conf is not None:
@@ -145,7 +143,6 @@ def build_cli_overrides(args):
     return overrides
 
 def create_run_directory(config):
-    """Create timestamped output directory."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     pattern = config.get('paths', {}).get('run_dir_pattern', 'runs/track_{timestamp}')
     run_dir = pattern.format(timestamp=timestamp)
@@ -179,29 +176,26 @@ def main():
     device = configure_torch_environment(config)
     print(f"Using device: {device}")
     
-    # Init detector
-    print("Loading YOLOv8 detector...")
+    # Init detector with built-in tracking
+    print("Loading YOLOv8/YOLOv11/YOLOv12 with built-in tracking...")
     detector_config = config.get('detector', {})
-    detector = YOLOv8Detector(detector_config)
+    detector = YOLOv8Detector(detector_config, use_tracking=True)
+    tracker_type = detector_config.get('tracker_type', 'bytetrack.yaml')
     print(f"✓ Detector loaded: {detector_config.get('model', 'yolov8n.pt')}")
+    print(f"✓ Built-in tracker: {tracker_type.replace('.yaml', '')} (ByteTrack/BoT-SORT)")
     
-    # Init tracker
-    print("Loading DeepSORT tracker...")
-    tracker_config = config.get('tracker', {})
-    tracker = DeepSortTracker(tracker_config)
-    print(f"✓ Tracker initialized with {tracker_config.get('embedder', 'mobilenet')} embedder")
     
     source = config.get('source', '0')
     print(f"\nSource: {source}")
     print("-" * 60)
     
-    # tracking pipeline
+    # tracking pipeline (tracker parameter is now optional/deprecated)
     print("Starting tracking pipeline...")
     stats = run_offline_tracking(
         source=source,
         config=config,
         detector=detector,
-        tracker=tracker,
+        tracker=None,  # No longer needed - YOLO has built-in tracking
         output_dir=output_dir
     )
     

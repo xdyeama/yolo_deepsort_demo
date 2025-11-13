@@ -97,7 +97,7 @@ class TrackSerializer:
         }
         self.frames.append(frame_data)
 
-    def save_json(self, path: Optional[str] = None) -> str:
+    def _save_json(self, path: Optional[str] = None) -> str:
         """
         Save tracks to JSON file with frame-centric structure.
 
@@ -248,7 +248,7 @@ class TrackSerializer:
         saved_paths = {}
         
         if self.save_json:
-            path = self.save_json()
+            path = self._save_json()
             if path:
                 saved_paths['json'] = path
         

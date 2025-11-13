@@ -33,6 +33,7 @@ def get_color_by_id(track_id: int) -> Tuple[int, int, int]:
     Returns:
         BGR color tuple
     """
+    track_id = int(track_id) if not isinstance(track_id, int) else track_id
     golden_ratio = 0.618033988749895
     hue = (track_id * golden_ratio) % 1.0
     
@@ -122,6 +123,7 @@ class Visualizer:
         # Draw each track
         for track in tracks:
             track_id = track['track_id']
+            print(f"Track id: {track_id}")
             bbox = track['bbox']  # [x1, y1, x2, y2]
             conf = track.get('confidence', 0.0)
             cls = track.get('class', 0)

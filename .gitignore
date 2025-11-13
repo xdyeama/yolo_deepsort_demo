@@ -1,0 +1,8 @@
+/.venv
+/src/__pycache__
+/src/io/__pycache__
+/src/models/__pycache__
+/src/trackers/__pycache__
+/src/utils/__pycache__
+/src/pipeline/__pycache__
+/data
