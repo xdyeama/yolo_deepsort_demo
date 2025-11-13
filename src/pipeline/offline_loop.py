@@ -3,7 +3,6 @@ Offline tracking loop for batch video processing.
 Processes all frames sequentially with progress tracking and complete output saving.
 
 Now uses YOLO's built-in tracking (ByteTrack/BoT-SORT) for real-time performance.
-DeepSORT code is commented out but kept for reference.
 """
 import cv2
 import traceback
@@ -15,9 +14,7 @@ from src.io.video_reader import VideoReader
 from src.io.video_writer import VideoWriter
 from src.io.serializer import TrackSerializer
 from src.io.visualizer import Visualizer, COCO_CLASSES
-from src.models.yolov8_detector import YOLODetector
-# COMMENTED OUT: DeepSORT is replaced by YOLO's built-in tracking
-# from src.trackers.deep_sort_wrapper import DeepSortTracker
+from src.models.yolo_detector import YOLODetector
 
 def apply_filters(
     detections: List[List[float]],
@@ -62,8 +59,7 @@ def apply_filters(
 def run_offline_tracking(
     source: str,
     config: Dict[str, Any],
-    detector: YOLOv8Detector,
-    tracker: Optional[Any] = None,  # DEPRECATED: tracker parameter kept for backward compatibility
+    detector: YOLODetector,
     output_dir: str = None
 ) -> Dict[str, Any]:
     """
@@ -75,15 +71,10 @@ def run_offline_tracking(
         source: Path to video file or image directory
         config: Merged config dict (runtime + detector + tracker)
         detector: Initialized YOLOv8Detector instance with tracking enabled
-        tracker: DEPRECATED - No longer used. YOLO's built-in tracker is used instead.
         output_dir: Directory for outputs (run_dir)
         
     Returns:
         Stats dict with processed_frames, total_time, avg_fps, saved_paths
-    
-    Note:
-        The 'tracker' parameter is kept for backward compatibility but is no longer used.
-        To use DeepSORT instead, uncomment the DeepSORT code blocks below.
     """
     try:
         reader = VideoReader(source)
@@ -134,18 +125,9 @@ def run_offline_tracking(
                 if max_frames and frame_idx >= max_frames:
                     break
 
-                # ===== NEW: YOLO Built-in Tracking (ByteTrack/BoT-SORT) =====
-                # Direct tracking with YOLO - no separate detection step needed
+                # Direct tracking with YOLO
                 tracks = detector.track_frame(frame)
                 
-                # ===== OLD: DeepSORT Tracking (COMMENTED OUT) =====
-                # # Detection
-                # detections = detector.predict_frame(frame)
-                # # Apply filters
-                # detections = apply_filters(detections, config.get('filters', {}))
-                # # Tracking with DeepSORT
-                # tracks = tracker.update(detections, frame)
-                # ==================================================
                 
                 # Apply filters to tracks (optional - can filter by confidence, class, etc.)
                 # Note: YOLO tracking already applies confidence filtering during tracking
@@ -211,10 +193,14 @@ def run_offline_tracking(
             )
         
         # Return statistics
+        # Ensure numeric values are never None
+        elapsed = progress_bar.format_dict.get('elapsed') or 0.0
+        rate = progress_bar.format_dict.get('rate') or 0.0
+        
         stats = {
             'processed_frames': progress_bar.n,
-            'total_time': progress_bar.format_dict.get('elapsed', 0.0),
-            'avg_fps': progress_bar.format_dict.get('rate', 0.0),
+            'total_time': float(elapsed),
+            'avg_fps': float(rate),
             'saved_paths': saved_paths,
             'output_video': str(writer.path) if writer and hasattr(writer, 'path') else None
         }

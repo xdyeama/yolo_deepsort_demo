@@ -1,5 +1,5 @@
 """
-Main CLI entry point for the YOLOv8+DeepSORT tracking pipeline.
+Main CLI entry point.
 """
 import argparse
 import sys
@@ -8,7 +8,7 @@ from datetime import datetime
 
 from src.utils.config import load_config
 from src.utils.devices import configure_torch_environment
-from src.models.yolov8_detector import YOLOv8Detector
+from src.models.yolo_detector import YOLODetector
 from src.pipeline.offline_loop import run_offline_tracking
 
 def parse_args():
@@ -16,7 +16,7 @@ def parse_args():
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description="YOLOv8 + DeepSORT Multi-Object Tracking Pipeline",
+        description="YOLO Multi-Object Tracking Pipeline",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         )
 
@@ -179,7 +179,7 @@ def main():
     # Init detector with built-in tracking
     print("Loading YOLOv8/YOLOv11/YOLOv12 with built-in tracking...")
     detector_config = config.get('detector', {})
-    detector = YOLOv8Detector(detector_config, use_tracking=True)
+    detector = YOLODetector(detector_config, use_tracking=True)
     tracker_type = detector_config.get('tracker_type', 'bytetrack.yaml')
     print(f"✓ Detector loaded: {detector_config.get('model', 'yolov8n.pt')}")
     print(f"✓ Built-in tracker: {tracker_type.replace('.yaml', '')} (ByteTrack/BoT-SORT)")
@@ -189,13 +189,12 @@ def main():
     print(f"\nSource: {source}")
     print("-" * 60)
     
-    # tracking pipeline (tracker parameter is now optional/deprecated)
+    # tracking pipeline 
     print("Starting tracking pipeline...")
     stats = run_offline_tracking(
         source=source,
         config=config,
         detector=detector,
-        tracker=None,  # No longer needed - YOLO has built-in tracking
         output_dir=output_dir
     )
     
@@ -204,8 +203,13 @@ def main():
     print("TRACKING COMPLETE")
     print("=" * 60)
     print(f"Processed frames: {stats.get('processed_frames', 0)}")
-    print(f"Total time: {stats.get('total_time', 0):.2f}s")
-    print(f"Average FPS: {stats.get('avg_fps', 0):.2f}")
+    
+    # Handle None values in stats
+    total_time = stats.get('total_time') or 0.0
+    avg_fps = stats.get('avg_fps') or 0.0
+    
+    print(f"Total time: {total_time:.2f}s")
+    print(f"Average FPS: {avg_fps:.2f}")
     
     if stats.get('output_video'):
         print(f"\n✓ Output video: {stats['output_video']}")

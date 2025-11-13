@@ -1,4 +1,4 @@
-model: yolov8n.pt
+model: yolov12s.pt
 device: auto
 img_size: 640
 conf_threshold: 0.5
