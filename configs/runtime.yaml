@@ -1,0 +1,63 @@
+source: 0                      
+input_type: auto               
+max_frames: null               
+stride: 1                      
+skip_first_n: 0                
+
+batch_size: 1                  
+prefetch: 0                    
+
+# Visualization config
+show: true                     
+window_name: YOLOv8+DeepSORT
+draw:
+  thickness: 2
+  font_scale: 0.5
+  show_conf: true
+  show_class: true
+  trails: true
+  trail_length: 32
+  color_mode: id               
+
+# Saving outputs
+save_video: true
+video_writer:
+  fourcc: mp4v                 
+  fps: null                    
+  filename_pattern: "{run_dir}/video.mp4"
+save_frames: false
+frames_dir: "{run_dir}/frames"
+
+# Persist tracks and detections
+save_tracks_json: true
+save_tracks_csv: false
+tracks_json_path: "{run_dir}/tracks.json"
+tracks_csv_path: "{run_dir}/tracks.csv"
+save_detections: false
+detections_json_path: "{run_dir}/detections.json"
+
+# Filtering before tracking
+filters:
+  class_allowlist: null        # e.g., [0] to track only 'person'
+  min_detector_confidence: 0.25
+  min_box_area: 100.0
+  region_mask_path: null       # optional polygon mask image
+
+# Performance/runtime behavior
+target_fps: null               # try to cap to FPS (sleep to match)
+vsync: false
+sleep_time_ms: 0
+read_threaded: true            # separate capture thread
+write_threaded: true           # separate writer thread
+queue_maxsize: 4               # frame queue bound
+drop_frame_if_busy: true       # maintain real-time by dropping frames
+
+# Graceful control
+exit_key: q
+headless: false                # implies show=false if true
+
+# Paths resolved at runtime (auto-filled by app)
+resolved:
+  run_dir: null                # computed from default.paths.run_dir_pattern
+  input_fps: null
+  frame_size: null

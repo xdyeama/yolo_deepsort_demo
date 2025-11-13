@@ -1,0 +1,32 @@
+project_name: yolo_deepsort_demo
+run_name: null
+seed: 42
+determenistic: false
+cudnn_benchmark: true
+torch_num_threads: 8
+
+device: auto
+precision: amp
+half: false
+torch_compile: true
+
+paths:
+  data_dir: data/inputs
+  outputs_dir: data/outputs
+  weights_dir: weights
+  run_dir_pattern: runs/track_{timestamp}
+
+includes:
+  detector: configs/detector.yaml
+  tracker: configs/tracker.yaml
+  runtime: configs/runtime.yaml
+
+logging:
+  level: info                   
+  rich_tracebacks: true
+  log_fps_every: 50
+  save_config_snapshot: true    
+
+profiling:
+  enable: false
+  warmup_frames: 3

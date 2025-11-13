@@ -1,0 +1,30 @@
+# Embedder/encoder model for feature extraction
+# Options: 'mobilenet', 'torchreid', 'clip_RN50', 'clip_ViT-B/32'
+embedder: 'mobilenet'
+
+# Optional: Model name for torchreid (e.g., 'osnet_x0_25')
+embedder_model_name: null
+
+# Optional: Path to custom embedder weights
+embedder_wts: null
+
+# Max frames to keep track alive without detections
+max_age: 30
+
+# Consecutive detections needed before track is confirmed
+n_init: 3
+
+# Max feature samples per track for matching
+nn_budget: 100
+
+# Max cosine distance for appearance matching (0.0-1.0)
+max_cosine_distance: 0.2
+
+# Max IOU distance threshold for motion matching (0.0-1.0)
+max_iou_distance: 0.7
+
+# NMS max overlap for detections (1.0 = disabled)
+nms_max_overlap: 1.0
+
+# Use polygon detections instead of bounding boxes
+polygon: false
