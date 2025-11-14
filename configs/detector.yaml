@@ -1,4 +1,4 @@
-model: yolov12s.pt
+model: yolo12s.pt
 device: auto
 img_size: 640
 conf_threshold: 0.5
@@ -15,16 +15,61 @@ warmup_frames: 3
 # tracker_type: botsort.yaml (more accurate, slower)
 tracker_type: bytetrack.yaml
 persist_tracks: true  # Keep tracks across frames
-train: data/train
-test: data/test
-val: data/val
-epochs: 100
-batch_size: 16
-workers: 4
-optimizer: adam
-lr0: 0.001
-momentum: 0.9
-weight_decay: 0.0001
+
+# Training parameters
+training:
+  data: null              # Path to dataset YAML (set when training)
+  epochs: 100               # Number of training epochs
+  batch_size: 16            # Batch size for training
+  img_size: 640             # Image size for training
+  workers: 8                # Number of dataloader workers
+  device: auto              # Training device (auto, cuda, cpu, mps)
+  
+  # Optimizer settings
+  optimizer: auto           # Optimizer (auto, SGD, Adam, AdamW)
+  lr0: 0.01                 # Initial learning rate
+  lrf: 0.01                 # Final learning rate (fraction of lr0)
+  momentum: 0.937           # SGD momentum / Adam beta1
+  weight_decay: 0.0005      # Optimizer weight decay
+  
+  # Learning rate scheduler
+  warmup_epochs: 3.0        # Warmup epochs for learning rate
+  warmup_momentum: 0.8      # Warmup initial momentum
+  warmup_bias_lr: 0.1       # Warmup initial bias learning rate
+  
+  # Training options
+  pretrained: true          # Use pretrained weights (transfer learning)
+  patience: 50              # Early stopping patience (epochs without improvement)
+  save_period: -1           # Save checkpoint every N epochs (-1 = only best/last)
+  cos_lr: false             # Use cosine learning rate scheduler
+  
+  # Output directories
+  project: yolo_training    # Project directory
+  name: custom_model        # Run name
+  save_dir: weights         # Directory to save final weights
+
+# Validation parameters
+validation:
+  batch_size: 16            # Validation batch size
+  img_size: 640             # Validation image size
+  split: val                # Dataset split (val, test)
+  save_json: false          # Save results in COCO JSON format
+  save_hybrid: false        # Save hybrid version of labels
+  conf: null                # Confidence threshold (null = use default)
+  iou: 0.6                  # NMS IoU threshold for validation
+  max_det: 300              # Maximum detections per image
+  plots: true               # Show plots during validation
+
+# Export parameters
+export:
+  format: onnx              # Export format (onnx, torchscript, tflite, etc.)
+  half: false               # Export FP16 model
+  simplify: true            # Simplify ONNX model
+  dynamic: false            # Dynamic input shapes (ONNX)
+  opset: null               # ONNX opset version (null = default)
+  workspace: 4              # TensorRT workspace size (GB)
+  nms: false                # Add NMS module to model
+  optimize: false           # TorchScript optimize for mobile
 
 preprocess:
   letterbox: true

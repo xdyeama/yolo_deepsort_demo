@@ -34,7 +34,7 @@ class YOLODetector:
 		self.device = configure_torch_environment(self.cfg)
 
 		# Load model (supports yolov8, yolov11, yolov12)
-		model_path = self.cfg.get("model", "yolov8n.pt")
+		model_path = self.cfg.get("model", "yolo12s.pt")
 		self.model = YOLO(model_path)
 		self.model.to(self.device)
 		self.model.model.eval()
@@ -240,3 +240,195 @@ class YOLODetector:
 		prepared = [self._preprocess_frame(f) for f in frames_bgr]
 		results = self._infer(prepared, track=True)
 		return self._postprocess_tracks(results, min_box_area=min_box_area)
+	
+	# ==================== TRAINING METHODS ====================
+	
+	def train(self, data_yaml: Optional[str] = None, **overrides) -> Dict[str, Any]:
+		"""
+		Train YOLO model on custom dataset using parameters from detector.yaml config.
+		Args:
+			data_yaml: Path to dataset YAML file (overrides config if provided)
+			**overrides: Override any training parameter from config
+
+		Returns:
+			Dict with training results
+		"""
+		from pathlib import Path
+		
+		# Get training config from detector.yaml
+		train_cfg = self.cfg.get('training', {})
+		
+		# Data path: CLI arg > override > config
+		data_path = data_yaml or overrides.get('data') or train_cfg.get('data')
+		if not data_path:
+			raise ValueError(
+				"Dataset YAML path must be provided via 'data_yaml' argument or "
+				"'training.data' in detector.yaml config"
+			)
+		
+		# Map config keys to YOLO API parameter names
+		param_mapping = {
+			'batch_size': 'batch',
+			'img_size': 'imgsz',
+		}
+		
+		# Start with config parameters, apply mapping
+		train_args = {'data': data_path, 'exist_ok': True}
+		for key, value in train_cfg.items():
+			if key != 'data':
+				mapped_key = param_mapping.get(key, key)
+				train_args[mapped_key] = value
+		
+		# Apply overrides with mapping
+		for key, value in overrides.items():
+			if key != 'data':
+				mapped_key = param_mapping.get(key, key)
+				train_args[mapped_key] = value
+		
+		print(f"\n{'='*60}")
+		print(f"Starting YOLO Training")
+		print(f"{'='*60}")
+		print(f"Model: {self.cfg.get('model', 'yolo12s.pt')}")
+		print(f"Dataset: {data_path}")
+		print(f"Epochs: {train_args.get('epochs', 'N/A')}")
+		print(f"Batch size: {train_args.get('batch', 'N/A')}")
+		print(f"Image size: {train_args.get('imgsz', 'N/A')}")
+		print(f"Device: {train_args.get('device', 'auto')}")
+		print(f"Optimizer: {train_args.get('optimizer', 'auto')}")
+		print(f"Learning rate: {train_args.get('lr0', 'N/A')}")
+		print(f"Save directory: {train_args.get('project', 'yolo_training')}/{train_args.get('name', 'custom_model')}")
+		print(f"{'='*60}\n")
+		
+		# Train the model
+		results = self.model.train(**train_args)
+		
+		# Get paths to saved weights
+		save_path = Path(train_args['project']) / train_args['name']
+		best_weights = save_path / "weights" / "best.pt"
+		last_weights = save_path / "weights" / "last.pt"
+		
+		# Copy best weights to configured save_dir
+		save_dir = Path(train_cfg.get('save_dir', overrides.get('save_dir', 'weights')))
+		save_dir.mkdir(parents=True, exist_ok=True)
+		
+		final_weights_path = save_dir / f"{train_args['name']}_best.pt"
+		
+		if best_weights.exists():
+			import shutil
+			shutil.copy2(best_weights, final_weights_path)
+			print(f"\n✓ Best weights saved to: {final_weights_path}")
+		
+		return {
+			'best_weights_path': str(final_weights_path) if final_weights_path.exists() else None,
+			'last_weights_path': str(last_weights) if last_weights.exists() else None,
+			'training_dir': str(save_path),
+			'results': results,
+			'metrics': {
+				'mAP50': getattr(results, 'maps', [0])[0] if hasattr(results, 'maps') else None,
+				'mAP50-95': getattr(results, 'map', 0) if hasattr(results, 'map') else None,
+			}
+		}
+	
+	def validate(self, data_yaml: Optional[str] = None, **overrides) -> Dict[str, Any]:
+		"""
+		Validate model on dataset using parameters from detector.yaml config.
+		Args:
+			data_yaml: Path to dataset YAML file (overrides config if provided)
+			**overrides: Override any validation parameter from config
+					
+		Returns:
+			Dict with validation metrics
+		"""
+		val_cfg = self.cfg.get('validation', {})
+		
+		data_path = data_yaml or overrides.get('data') or val_cfg.get('data') or self.cfg.get('training', {}).get('data')
+		if not data_path:
+			raise ValueError(
+				"Dataset YAML path must be provided via 'data_yaml' argument or "
+				"'validation.data' in detector.yaml config"
+			)
+		
+		# Map config keys to YOLO API parameter names
+		param_mapping = {
+			'batch_size': 'batch',
+			'img_size': 'imgsz',
+		}
+		
+		# Start with config parameters, apply mapping
+		val_args = {'data': data_path}
+		for key, value in val_cfg.items():
+			if key != 'data' and value is not None:
+				mapped_key = param_mapping.get(key, key)
+				val_args[mapped_key] = value
+		
+		# Apply overrides with mapping
+		for key, value in overrides.items():
+			if key != 'data' and value is not None:
+				mapped_key = param_mapping.get(key, key)
+				val_args[mapped_key] = value
+		
+		print(f"\n{'='*60}")
+		print(f"Starting Validation")
+		print(f"{'='*60}")
+		print(f"Dataset: {data_path}")
+		print(f"Split: {val_args['split']}")
+		print(f"Batch size: {val_args['batch']}")
+		print(f"Image size: {val_args['imgsz']}")
+		print(f"{'='*60}\n")
+		
+		results = self.model.val(**val_args)
+		
+		return {
+			'mAP50': results.box.map50 if hasattr(results, 'box') else None,
+			'mAP50-95': results.box.map if hasattr(results, 'box') else None,
+			'precision': results.box.mp if hasattr(results, 'box') else None,
+			'recall': results.box.mr if hasattr(results, 'box') else None,
+			'results': results
+		}
+	
+	def export_model(self, output_path: Optional[str] = None, **overrides) -> str:
+		"""
+		Export model to different formats using parameters from detector.yaml config.
+		Args:
+			output_path: Custom output path (overrides auto path)
+			**overrides: Override any export parameter from config
+			
+		Returns:
+			Path to exported model
+		"""
+		# Get export config from detector.yaml
+		export_cfg = self.cfg.get('export', {})
+		
+		# Start with config parameters (excluding None values)
+		export_args = {}
+		for key, value in export_cfg.items():
+			if value is not None:
+				export_args[key] = value
+		
+		# Apply overrides
+		for key, value in overrides.items():
+			if value is not None:
+				export_args[key] = value
+		
+		# Get format for printing
+		export_format = export_args.get('format', 'onnx')
+		
+		print(f"\n{'='*60}")
+		print(f"Exporting Model to {export_format.upper()}")
+		print(f"{'='*60}")
+		print(f"Format: {export_format}")
+		print(f"Half precision: {export_args.get('half', False)}")
+		print(f"{'='*60}\n")
+		
+		exported_path = self.model.export(**export_args)
+		
+		if output_path and exported_path:
+			import shutil
+			from pathlib import Path
+			Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+			shutil.copy2(exported_path, output_path)
+			print(f"✓ Model exported to: {output_path}")
+			return output_path
+		
+		print(f"✓ Model exported to: {exported_path}")
+		return exported_path

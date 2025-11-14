@@ -6,3 +6,13 @@
 /src/utils/__pycache__
 /src/pipeline/__pycache__
 /data
+*.pt
+
+# Docker
+*.log
+logs/
+runs/
+
+# OS
+.DS_Store
+*~

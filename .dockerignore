@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation (optional, include if needed)
+*.md
+!README.md
+
+# Large files that should be downloaded
+# weights/*.pt  # Uncomment if you want to download weights in container
+
+# Runs and outputs (will be created in container)
+runs/
+logs/
+data/outputs/
+
+# Temporary files
+*.tmp
+*.log
+.cache/
+

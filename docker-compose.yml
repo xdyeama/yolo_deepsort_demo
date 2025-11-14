@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  yolo-tracking:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yolo-tracking:latest
+    container_name: yolo_tracking_demo
+    
+    # GPU access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+      
+    # Volume mounts
+    volumes:
+      # Mount data directories
+      - ./data:/app/data
+      - ./weights:/app/weights
+      - ./runs:/app/runs
+      - ./logs:/app/logs
+      # Mount config files (optional, for easy updates)
+      - ./configs:/app/configs
+    
+    # Runtime options
+    runtime: nvidia
+    shm_size: '8gb'  # Increase shared memory for large batches
+    
+    # Network mode
+    network_mode: "host"
+    
+    # Keep container running (for interactive use)
+    stdin_open: true
+    tty: true
+    
+    # Command (override as needed)
+    command: python -m src.main --source 0 --show
+

@@ -181,7 +181,7 @@ def main():
     detector_config = config.get('detector', {})
     detector = YOLODetector(detector_config, use_tracking=True)
     tracker_type = detector_config.get('tracker_type', 'bytetrack.yaml')
-    print(f"✓ Detector loaded: {detector_config.get('model', 'yolov8n.pt')}")
+    print(f"✓ Detector loaded: {detector_config.get('model', 'yolo12s.pt')}")
     print(f"✓ Built-in tracker: {tracker_type.replace('.yaml', '')} (ByteTrack/BoT-SORT)")
     
     

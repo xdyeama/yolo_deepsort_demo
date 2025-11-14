@@ -109,11 +109,22 @@ def load_config(
 	tracker_yaml_path = tracker_yaml_path or includes.get("tracker")
 	runtime_yaml_path = runtime_yaml_path or includes.get("runtime")
 
-	# Merge in order
+	# Load and nest sub-configs under their respective keys
+	detector_cfg = _read_yaml_file(detector_yaml_path) if detector_yaml_path else {}
+	tracker_cfg = _read_yaml_file(tracker_yaml_path) if tracker_yaml_path else {}
+	runtime_cfg = _read_yaml_file(runtime_yaml_path) if runtime_yaml_path else {}
+	
+	# Merge in order: start with default, then add nested configs
 	merged = default_cfg
-	merged = _deep_merge(merged, _read_yaml_file(detector_yaml_path) if detector_yaml_path else {})
-	merged = _deep_merge(merged, _read_yaml_file(tracker_yaml_path) if tracker_yaml_path else {})
-	merged = _deep_merge(merged, _read_yaml_file(runtime_yaml_path) if runtime_yaml_path else {})
+	if detector_cfg:
+		merged.setdefault('detector', {})
+		merged['detector'] = _deep_merge(merged['detector'], detector_cfg)
+	if tracker_cfg:
+		merged.setdefault('tracker', {})
+		merged['tracker'] = _deep_merge(merged['tracker'], tracker_cfg)
+	if runtime_cfg:
+		# Runtime config is merged at root level for backward compatibility
+		merged = _deep_merge(merged, runtime_cfg)
 
 	# Normalize CLI overrides input
 	if cli_overrides is not None and not isinstance(cli_overrides, dict):
