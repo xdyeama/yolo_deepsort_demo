@@ -79,10 +79,19 @@ sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
 
-### 4. Build Docker Image
+### 4. Build Docker Image (with Buildx)
 ```bash
 cd yolo_tracking
-docker build -t yolo-tracking:latest .
+
+# Build with buildx (recommended)
+./docker_run.sh build
+
+# Or setup buildx first (one-time)
+./docker_run.sh buildx-setup
+./docker_run.sh build
+
+# Or manually with buildx
+docker buildx build --platform linux/amd64 -t yolo-tracking:latest --load .
 ```
 
 ---
@@ -291,8 +300,3 @@ docker images | grep yolo-tracking
 echo "=== Test Run ==="
 ./docker_run.sh bash -c "python --version && python -c 'import torch; print(f\"PyTorch: {torch.__version__}\"); print(f\"CUDA Available: {torch.cuda.is_available()}\")'"
 ```
-
----
-
-**Ready to go! 🎉**
-

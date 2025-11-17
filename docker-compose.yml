@@ -8,20 +8,21 @@ services:
     image: yolo-tracking:latest
     container_name: yolo_tracking_demo
     
-    # GPU access
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # GPU access (optional - uncomment if you have NVIDIA GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     
-    # Environment variables
+    # Environment variables (GPU-related, optional)
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - CUDA_VISIBLE_DEVICES=0
+      # - NVIDIA_VISIBLE_DEVICES=all
+      # - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      # - CUDA_VISIBLE_DEVICES=0
+      - DEVICE=${DEVICE:-cpu}  # Set device: cpu, cuda, or mps
       
     # Volume mounts
     volumes:
@@ -33,8 +34,8 @@ services:
       # Mount config files (optional, for easy updates)
       - ./configs:/app/configs
     
-    # Runtime options
-    runtime: nvidia
+    # Runtime options (comment out for CPU-only)
+    # runtime: nvidia
     shm_size: '8gb'  # Increase shared memory for large batches
     
     # Network mode
@@ -45,5 +46,6 @@ services:
     tty: true
     
     # Command (override as needed)
-    command: python -m src.main --source 0 --show
+    # Use --device cpu for CPU mode, --device cuda for GPU mode
+    command: python -m src.main --source 0 --show --device ${DEVICE:-cpu}
 

@@ -1,8 +1,15 @@
-# Multi-stage build for YOLO tracking project
-# Optimized for NVIDIA A100 GPU
+# Multi-platform build for YOLO tracking project
+# Supports CPU, MPS (falls back to CPU in Docker), and CUDA devices
+# Built with Docker Buildx for amd64 platform
+# Note: CUDA base image works for both CPU and GPU modes
+
+# Build arguments for multi-platform support (buildx)
+ARG TARGETPLATFORM=linux/amd64
+ARG BUILDPLATFORM
 
 # Base image with CUDA support (Latest: CUDA 12.6.2 + cuDNN 9)
-FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS base
+# Explicitly set platform for buildx compatibility
+FROM --platform=${TARGETPLATFORM} nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS base
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \

@@ -1,17 +1,5 @@
 # Docker Deployment Guide
 
-This guide explains how to build and run the YOLO tracking project in Docker containers on an Ubuntu VM with NVIDIA A100 GPU.
-
-## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Building the Docker Image](#building-the-docker-image)
-- [Running the Container](#running-the-container)
-- [Usage Examples](#usage-examples)
-- [Troubleshooting](#troubleshooting)
-
----
-
 ## Prerequisites
 
 ### On the Server (Ubuntu VM with A100)
@@ -95,17 +83,35 @@ rsync -avz --progress /path/to/yolo_deepsort_demo user@server-ip:/home/user/yolo
 
 ## Building the Docker Image
 
-### Build the Image
+### Build the Image (with Buildx)
+
+The project uses Docker Buildx for optimized builds on Linux/amd64 (required for A100 GPU support):
 
 ```bash
 # Navigate to project directory
 cd yolo_tracking_demo
 
-# Build using the shell script
+# Build using the shell script (uses buildx automatically)
 ./docker_run.sh build
 
-# Or build manually
-docker build -t yolo-tracking:latest .
+# Or setup buildx first (one-time setup)
+./docker_run.sh buildx-setup
+
+# Or build manually with buildx
+docker buildx build --platform linux/amd64 -t yolo-tracking:latest --load .
+```
+
+### Buildx Setup (One-Time)
+
+If buildx is not initialized, run:
+
+```bash
+# Setup buildx builder
+./docker_run.sh buildx-setup
+
+# Or manually
+docker buildx create --name multiarch --use
+docker buildx inspect --bootstrap
 ```
 
 ### Verify the Build
@@ -115,7 +121,24 @@ docker images | grep yolo-tracking
 
 # Check image size
 docker images yolo-tracking:latest --format "{{.Size}}"
+
+# Verify platform
+docker inspect yolo-tracking:latest | grep Architecture
 ```
+
+### Build Options
+
+**Standard build (amd64 for GPU):**
+```bash
+./docker_run.sh build
+```
+
+**Explicit platform build:**
+```bash
+./docker_run.sh buildx-build linux/amd64
+```
+
+**Note:** GPU support (A100) requires `linux/amd64` platform. Other platforms will not have CUDA support.
 
 ---
 
@@ -270,21 +293,6 @@ detector.export_model(format='onnx', half=True)
 "
 ```
 
----
-
-## Volume Mounts
-
-The Docker setup uses the following volume mounts:
-
-| Host Directory | Container Directory | Purpose |
-|---------------|---------------------|---------|
-| `./data` | `/app/data` | Input/output data |
-| `./weights` | `/app/weights` | Model weights |
-| `./runs` | `/app/runs` | Training/inference runs |
-| `./logs` | `/app/logs` | Application logs |
-| `./configs` | `/app/configs` | Configuration files |
-
----
 
 ## Performance Optimization for A100
 
@@ -343,16 +351,6 @@ docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu22.04 nvidia-smi
 **If it fails, check Docker daemon config:**
 ```bash
 sudo cat /etc/docker/daemon.json
-# Should contain:
-# {
-#     "runtimes": {
-#         "nvidia": {
-#             "path": "nvidia-container-runtime",
-#             "runtimeArgs": []
-#         }
-#     },
-#     "default-runtime": "nvidia"
-# }
 
 # Restart Docker
 sudo systemctl restart docker
@@ -453,31 +451,3 @@ docker image prune
 ```bash
 docker builder prune -a
 ```
-
----
-
-## Security Considerations
-
-1. **Don't run as root** (use `--user` flag if needed)
-2. **Limit GPU access** (use `CUDA_VISIBLE_DEVICES=0` to limit to specific GPU)
-3. **Use secrets** for any API keys (don't bake into image)
-4. **Update base image regularly** for security patches
-
----
-
-## Additional Resources
-
-- [NVIDIA Container Toolkit Documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/overview.html)
-- [Docker GPU Support](https://docs.docker.com/config/containers/resource_constraints/#gpu)
-- [YOLO Ultralytics Documentation](https://docs.ultralytics.com/)
-- [A100 Performance Guide](https://www.nvidia.com/en-us/data-center/a100/)
-
----
-
-## Support
-
-For issues or questions:
-1. Check the [Troubleshooting](#troubleshooting) section
-2. Review Docker and NVIDIA logs
-3. Verify GPU drivers and CUDA compatibility
-

@@ -272,16 +272,31 @@ class YOLODetector:
 			'img_size': 'imgsz',
 		}
 		
+		# Resolve device before building train_args
+		# Merge config and overrides to get device preference
+		device_config = {**self.cfg, **overrides}
+		from src.utils.devices import get_device
+		resolved_device = get_device(device_config)
+		# Convert torch.device to string for YOLO API
+		device_str = str(resolved_device)
+		# YOLO expects 'cuda', 'cpu', or device index like '0', '1', etc.
+		if device_str.startswith('cuda:'):
+			device_str = device_str.split(':')[1]  # Extract device index
+		elif device_str == 'cuda':
+			device_str = 'cuda'  # Keep as is
+		else:
+			device_str = 'cpu'  # cpu or mps -> cpu
+		
 		# Start with config parameters, apply mapping
-		train_args = {'data': data_path, 'exist_ok': True}
+		train_args = {'data': data_path, 'exist_ok': True, 'device': device_str}
 		for key, value in train_cfg.items():
-			if key != 'data':
+			if key != 'data' and key != 'device':  # Skip device, already resolved
 				mapped_key = param_mapping.get(key, key)
 				train_args[mapped_key] = value
 		
-		# Apply overrides with mapping
+		# Apply overrides with mapping (device is already resolved above)
 		for key, value in overrides.items():
-			if key != 'data':
+			if key != 'data' and key != 'device':  # Skip device, already resolved
 				mapped_key = param_mapping.get(key, key)
 				train_args[mapped_key] = value
 		

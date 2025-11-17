@@ -119,7 +119,8 @@ deploy:
 
 ### Build & Setup
 ```bash
-./docker_run.sh build          # Build Docker image
+./docker_run.sh build          # Build Docker image with buildx (amd64)
+./docker_run.sh buildx-setup   # Setup buildx builder (one-time)
 ./setup_server.sh              # Setup server (one-time)
 ```
 
@@ -141,7 +142,10 @@ docker-compose down            # Stop and remove
 
 ### Manual Docker
 ```bash
-# Build
+# Build with buildx (recommended for amd64/GPU)
+docker buildx build --platform linux/amd64 -t yolo-tracking:latest --load .
+
+# Or standard build (fallback)
 docker build -t yolo-tracking:latest .
 
 # Run inference
@@ -229,7 +233,10 @@ sudo nvidia-ctk runtime configure --runtime=docker
 # Clean build cache
 docker builder prune -a
 
-# Rebuild without cache
+# Rebuild without cache (with buildx)
+docker buildx build --platform linux/amd64 --no-cache -t yolo-tracking:latest --load .
+
+# Or standard build
 docker build --no-cache -t yolo-tracking:latest .
 ```
 
@@ -292,8 +299,8 @@ docker run -e API_KEY=$(cat secret.key) ...
 
 4. **Regular updates**
 ```bash
-docker pull nvidia/cuda:12.6.2-cudnn8-runtime-ubuntu22.04
-docker build -t yolo-tracking:latest .
+docker pull nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04
+docker buildx build --platform linux/amd64 -t yolo-tracking:latest --load .
 ```
 
 5. **Read-only mounts where possible**

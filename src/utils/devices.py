@@ -13,7 +13,8 @@ def get_device(config: Optional[Dict[str, Any]] = None) -> torch.device:
 
     preferred = _preferred_device_from_config(config or {})
     if preferred in ("cuda", "gpu"):
-        if torch.cuda.is_available():
+        # Check both CUDA availability AND that devices are actually accessible
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
             return torch.device("cuda")
         # fallback
         return torch.device("cpu")
@@ -25,7 +26,8 @@ def get_device(config: Optional[Dict[str, Any]] = None) -> torch.device:
         return torch.device("cpu")
 
     # auto
-    if torch.cuda.is_available():
+    # Check both CUDA availability AND that devices are actually accessible
+    if torch.cuda.is_available() and torch.cuda.device_count() > 0:
         return torch.device("cuda")
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
