@@ -36,7 +36,17 @@ class YOLODetector:
 		# Load model (supports yolov8, yolov11, yolov12)
 		model_path = self.cfg.get("model", "yolo12s.pt")
 		self.model = YOLO(model_path)
+		
+		# Move model to device and verify
 		self.model.to(self.device)
+		# Verify model is on the correct device
+		if self.device.type == 'cuda':
+			# Get the actual device the model is on
+			model_device = next(self.model.model.parameters()).device
+			if model_device.type != 'cuda':
+				raise RuntimeError(f"Model failed to move to GPU. Expected cuda, got {model_device}")
+			print(f"✓ Model loaded on GPU: {torch.cuda.get_device_name(model_device.index)}")
+		
 		self.model.model.eval()
 
 		# Precision controls
@@ -287,6 +297,21 @@ class YOLODetector:
 		else:
 			device_str = 'cpu'  # cpu or mps -> cpu
 		
+		# Ensure model is on the correct device before training
+		if device_str == 'cuda' and self.device.type != 'cuda':
+			# Re-configure device if it changed
+			self.device = resolved_device
+			self.model.to(self.device)
+		elif device_str == 'cuda':
+			# Verify model is on GPU
+			model_device = next(self.model.model.parameters()).device
+			if model_device.type != 'cuda':
+				self.model.to(self.device)
+				print(f"✓ Moved model to GPU: {torch.cuda.get_device_name(self.device.index)}")
+		
+		# Set model to training mode
+		self.model.model.train()
+		
 		# Start with config parameters, apply mapping
 		train_args = {'data': data_path, 'exist_ok': True, 'device': device_str}
 		for key, value in train_cfg.items():
@@ -300,6 +325,22 @@ class YOLODetector:
 				mapped_key = param_mapping.get(key, key)
 				train_args[mapped_key] = value
 		
+		# Verify GPU usage if CUDA is requested
+		if device_str == 'cuda':
+			if not torch.cuda.is_available():
+				raise RuntimeError("CUDA requested but not available")
+			if torch.cuda.device_count() == 0:
+				raise RuntimeError("CUDA requested but no GPU devices found")
+			gpu_name = torch.cuda.get_device_name(0)
+			gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+			print(f"✓ GPU Available: {gpu_name} ({gpu_memory:.1f} GB)")
+			# Verify model parameters are on GPU
+			model_device = next(self.model.model.parameters()).device
+			if model_device.type == 'cuda':
+				print(f"✓ Model parameters on GPU: {torch.cuda.get_device_name(model_device.index)}")
+			else:
+				raise RuntimeError(f"Model parameters not on GPU! Found on {model_device}")
+		
 		print(f"\n{'='*60}")
 		print(f"Starting YOLO Training")
 		print(f"{'='*60}")
@@ -309,6 +350,8 @@ class YOLODetector:
 		print(f"Batch size: {train_args.get('batch', 'N/A')}")
 		print(f"Image size: {train_args.get('imgsz', 'N/A')}")
 		print(f"Device: {train_args.get('device', 'auto')}")
+		if device_str == 'cuda':
+			print(f"GPU: {torch.cuda.get_device_name(0)}")
 		print(f"Optimizer: {train_args.get('optimizer', 'auto')}")
 		print(f"Learning rate: {train_args.get('lr0', 'N/A')}")
 		print(f"Save directory: {train_args.get('project', 'yolo_training')}/{train_args.get('name', 'custom_model')}")
@@ -369,8 +412,27 @@ class YOLODetector:
 			'img_size': 'imgsz',
 		}
 		
+		# Resolve device for validation (use same device as model)
+		device_str = str(self.device)
+		if device_str.startswith('cuda:'):
+			device_str = device_str.split(':')[1]  # Extract device index
+		elif device_str == 'cuda':
+			device_str = 'cuda'  # Keep as is
+		else:
+			device_str = 'cpu'  # cpu or mps -> cpu
+		
+		# Ensure model is on the correct device
+		if device_str == 'cuda':
+			model_device = next(self.model.model.parameters()).device
+			if model_device.type != 'cuda':
+				self.model.to(self.device)
+				print(f"✓ Moved model to GPU for validation: {torch.cuda.get_device_name(self.device.index)}")
+		
+		# Set model to eval mode for validation
+		self.model.model.eval()
+		
 		# Start with config parameters, apply mapping
-		val_args = {'data': data_path}
+		val_args = {'data': data_path, 'device': device_str}
 		for key, value in val_cfg.items():
 			if key != 'data' and value is not None:
 				mapped_key = param_mapping.get(key, key)
@@ -386,9 +448,11 @@ class YOLODetector:
 		print(f"Starting Validation")
 		print(f"{'='*60}")
 		print(f"Dataset: {data_path}")
-		print(f"Split: {val_args['split']}")
-		print(f"Batch size: {val_args['batch']}")
-		print(f"Image size: {val_args['imgsz']}")
+		print(f"Device: {device_str}")
+		if 'split' in val_args:
+			print(f"Split: {val_args['split']}")
+		print(f"Batch size: {val_args.get('batch', 'N/A')}")
+		print(f"Image size: {val_args.get('imgsz', 'N/A')}")
 		print(f"{'='*60}\n")
 		
 		results = self.model.val(**val_args)
