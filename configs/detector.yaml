@@ -1,5 +1,5 @@
 model: yolo12s.pt
-device: auto
+device: cuda
 img_size: 640
 conf_threshold: 0.5
 iou_threshold: 0.7
@@ -23,7 +23,7 @@ training:
   batch_size: 16            # Batch size for training
   img_size: 640             # Image size for training
   workers: 8                # Number of dataloader workers
-  device: auto              # Training device (auto, cuda, cpu, mps)
+  device: cuda              # Training device (auto, cuda, cpu, mps)
   
   # Optimizer settings
   optimizer: auto           # Optimizer (auto, SGD, Adam, AdamW)

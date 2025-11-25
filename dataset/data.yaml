@@ -1,0 +1,15 @@
+path: dataset
+
+train: train/images
+test: test/images
+val: val/images
+
+names:
+  0: mechanic
+  1: truck
+  2: tractor
+  3: fire extinquisher
+  4: class4
+  5: class5
+  6: class6
+  7: class7

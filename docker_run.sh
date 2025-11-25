@@ -14,8 +14,8 @@ echo -e "${GREEN}YOLO Tracking Docker Runner${NC}"
 echo -e "${GREEN}========================================${NC}"
 
 # Default values
-IMAGE_NAME="xdyeama/yolo-tracking"
-CONTAINER_NAME="yolo_tracking_demo"
+IMAGE_NAME="xdyeama/yolo_tracking"
+CONTAINER_NAME="yolo_tracking"
 USE_GPU=false
 DEVICE_TYPE="auto"
 

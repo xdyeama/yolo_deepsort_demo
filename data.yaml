@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 8
+names: ['car', 'car lift', 'fire extinguisher', 'guest', 'mechanic', 'person', 'tractor', 'truck']
+
+roboflow:
+  workspace: yolotrain-tthzq
+  project: my-first-project-gvgu0
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/yolotrain-tthzq/my-first-project-gvgu0/dataset/1
