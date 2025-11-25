@@ -7,7 +7,7 @@
 /src/pipeline/__pycache__
 /data
 *.pt
-
+/dataset
 # Docker
 *.log
 logs/
